@@ -9,6 +9,8 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { ProfilesModule } from './modules/profiles/profiles.module';
+import { AssetsModule } from './modules/assets/assets.module';
+import { MarketModule } from './modules/market/market.module';
 
 @Module({
   imports: [
@@ -31,6 +33,8 @@ import { ProfilesModule } from './modules/profiles/profiles.module';
     AuthModule,
     DocumentsModule,
     ProfilesModule,
+    AssetsModule,
+    MarketModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }, AppService],
