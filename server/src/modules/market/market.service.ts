@@ -12,15 +12,24 @@ import { Repository } from 'typeorm';
 import { CreateMarketDepreciationDto } from './dto/create-market-depreciation.dto';
 import { UpdateMarketDepreciationDto } from './dto/update-market-depreciation.dto';
 import { AssetsService } from '../assets/assets.service';
+import { MaintenanceService } from '../maintenances/maintenances.service';
 
 @Injectable()
 export class MarketService {
   constructor(
     @InjectRepository(MarketDepreciation)
     private readonly marketRepo: Repository<MarketDepreciation>,
-    @Inject(forwardRef(() => AssetsService))
     private readonly assetsService: AssetsService,
+    @Inject(forwardRef(() => MaintenanceService))
+    private readonly maintenanceService: MaintenanceService,
   ) {}
+
+  /**
+   * Kreira novu kategoriju za amortizaciju/aprecijaciju tržišne vrednosti.
+   * Proverava da li kategorija sa istim imenom već postoji pre čuvanja.
+   * @param dto Podaci za kreiranje kategorije (ime, procenti, tip rasta/pada)
+   * @returns Snimljen entitet kategorije
+   */
 
   async create(dto: CreateMarketDepreciationDto) {
     const existing = await this.marketRepo.findOne({
@@ -36,9 +45,20 @@ export class MarketService {
     return await this.marketRepo.save(category);
   }
 
+  /**
+   * Dobavlja listu svih definisanih kategorija tržišnih kretanja.
+   * @returns Niz MarketDepreciation entiteta poređanih po imenu (A-Z)
+   */
+
   async findAll() {
     return await this.marketRepo.find({ order: { category_name: 'ASC' } });
   }
+
+  /**
+   * Pronalazi specifičnu kategoriju na osnovu njenog ID-a.
+   * @param id Jedinstveni ID kategorije
+   * @returns Pronađeni entitet ili baca NotFoundException
+   */
 
   async findOne(id: number) {
     const category = await this.marketRepo.findOne({ where: { id } });
@@ -46,12 +66,23 @@ export class MarketService {
     return category;
   }
 
+  /**
+   * Ažurira parametre postojeće kategorije tržišnih kretanja.
+   * @param id ID kategorije koja se menja
+   * @param dto Delimični ili potpuni podaci za ažuriranje
+   * @returns Ažuriran entitet
+   */
   async update(id: number, dto: UpdateMarketDepreciationDto) {
     const category = await this.findOne(id);
     Object.assign(category, dto);
     return await this.marketRepo.save(category);
   }
 
+  /**
+   * Uklanja kategoriju tržišnih kretanja iz baze podataka.
+   * @param id ID kategorije za brisanje
+   * @returns Poruka o uspešnom brisanju
+   */
   async remove(id: number) {
     const category = await this.findOne(id);
     await this.marketRepo.remove(category);
@@ -59,9 +90,14 @@ export class MarketService {
   }
 
   /**
-   * Izračunava projektovanu vrednost aseta na osnovu parametara tržišta
-   * @param assetId UUID aseta
-   * @param targetYear Godina za koju želimo procenu (npr. 2029)
+   * Računa projektovanu tržišnu vrednost imovine za zadatu godinu.
+   * Logika uzima u obzir tržišnu kategoriju (amortizacija ili apresijacija)
+   * i koriguje stopu pada vrednosti ukoliko postoje dokazi o održavanju imovine.
+   * * @param assetId UUID aseta koji se procenjuje
+   * @param targetYear Godina za koju se vrši projekcija (mora biti >= tekuće)
+   * @returns Projektovana numerička vrednost zaokružena na dve decimale
+   * @throws Error ako aset nema definisanu tržišnu kategoriju
+   * @throws BadRequestException ako je ciljna godina u prošlosti
    */
   async calculateValuation(
     assetId: string,
@@ -70,31 +106,34 @@ export class MarketService {
     const asset = await this.assetsService.getAssetDetails(assetId);
 
     if (!asset.marketCategory) {
-      throw new Error(
-        'Asset nema dodeljenu tržišnu kategoriju za amortizaciju.',
-      );
+      throw new Error('Asset nema dodeljenu tržišnu kategoriju.');
     }
+
+    const financialProfile =
+      await this.maintenanceService.getAssetFinancialProfile(assetId);
+    const hasMaintenance =
+      financialProfile.breakdown.maintenances.length > 0 ||
+      financialProfile.breakdown.insurances.length > 0;
 
     const currentYear = new Date().getFullYear();
     const yearsDiff = targetYear - currentYear;
 
-    if (yearsDiff < 0) {
-      throw new BadRequestException('Ciljna godina ne može biti u prošlosti.');
-    }
+    if (yearsDiff < 0) throw new BadRequestException('Godina je u prošlosti.');
 
     let projectedValue = Number(asset.total_price);
-
     const { year_1_pct, annual_avg_pct, is_appreciation } =
       asset.marketCategory;
 
     for (let i = 1; i <= yearsDiff; i++) {
-      const currentRate = i === 1 ? Number(year_1_pct) : Number(annual_avg_pct);
+      let currentRate = i === 1 ? Number(year_1_pct) : Number(annual_avg_pct);
 
-      if (is_appreciation) {
-        projectedValue = projectedValue * (1 + currentRate);
-      } else {
-        projectedValue = projectedValue * (1 - currentRate);
+      if (!is_appreciation && hasMaintenance) {
+        currentRate = currentRate * 0.8;
       }
+
+      projectedValue = is_appreciation
+        ? projectedValue * (1 + currentRate)
+        : projectedValue * (1 - currentRate);
     }
 
     return Math.round(projectedValue * 100) / 100;

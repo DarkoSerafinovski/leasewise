@@ -6,59 +6,62 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
   UseGuards,
+  ParseIntPipe,
+  HttpStatus,
+  HttpCode,
 } from '@nestjs/common';
 import { MarketService } from './market.service';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { CreateMarketDepreciationDto } from './dto/create-market-depreciation.dto';
 import { UpdateMarketDepreciationDto } from './dto/update-market-depreciation.dto';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { RolesGuard } from '../auth/guards/roles.guard';
 
 @Controller('market')
 export class MarketController {
   constructor(private readonly marketService: MarketService) {}
 
-  @Post()
-  @Roles('admin')
+  @Post('categories')
   @UseGuards(RolesGuard)
-  create(@Body() dto: CreateMarketDepreciationDto) {
-    return this.marketService.create(dto);
-  }
-
-  @Get()
-  findAll() {
-    return this.marketService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.marketService.findOne(+id);
-  }
-
-  @Patch(':id')
   @Roles('admin')
-  @UseGuards(RolesGuard)
-  update(@Param('id') id: string, @Body() dto: UpdateMarketDepreciationDto) {
-    return this.marketService.update(+id, dto);
+  @HttpCode(HttpStatus.CREATED)
+  async createCategory(@Body() dto: CreateMarketDepreciationDto) {
+    return await this.marketService.create(dto);
   }
 
-  @Delete(':id')
+  @Patch('categories/:id')
+  @UseGuards(RolesGuard)
   @Roles('admin')
-  @UseGuards(RolesGuard)
-  remove(@Param('id') id: string) {
-    return this.marketService.remove(+id);
+  async updateCategory(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateMarketDepreciationDto,
+  ) {
+    return await this.marketService.update(id, dto);
   }
 
-  @Get('valuation/:assetId/:year')
+  @Delete('categories/:id')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  async removeCategory(@Param('id', ParseIntPipe) id: number) {
+    return await this.marketService.remove(id);
+  }
+
+  @Get('categories')
+  async findAllCategories() {
+    return await this.marketService.findAll();
+  }
+
+  @Get('categories/:id')
+  async findOneCategory(@Param('id', ParseIntPipe) id: number) {
+    return await this.marketService.findOne(id);
+  }
+
+  @Get('valuation/:assetId')
   async getValuation(
     @Param('assetId') assetId: string,
-    @Param('year') year: string,
+    @Query('targetYear', ParseIntPipe) targetYear: number,
   ) {
-    const value = await this.marketService.calculateValuation(assetId, +year);
-    return {
-      asset_id: assetId,
-      projected_year: +year,
-      estimated_value: value,
-    };
+    return await this.marketService.calculateValuation(assetId, targetYear);
   }
 }

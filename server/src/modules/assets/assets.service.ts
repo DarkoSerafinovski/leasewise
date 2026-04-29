@@ -29,6 +29,12 @@ export class AssetsService {
     private readonly assetFeatureRepo: Repository<AssetFeature>,
   ) {}
 
+  /**
+   * Kreira novu karakteristiku (opremu) u šifarniku.
+   * Proverava unikatnost kombinacije imena i kategorije.
+   * @param dto Podaci o nazivu i kategoriji karakteristike
+   * @returns Snimljen Feature entitet
+   */
   async createFeature(dto: CreateFeatureDto) {
     const existing = await this.featureRepo.findOne({
       where: { name: dto.name, category: dto.category },
@@ -44,12 +50,22 @@ export class AssetsService {
     return await this.featureRepo.save(feature);
   }
 
+  /**
+   * Dobavlja sve dostupne karakteristike iz šifarnika.
+   * @returns Niz Feature entiteta sortiranih po kategoriji i nazivu
+   */
   async findAllFeatures() {
     return await this.featureRepo.find({
       order: { category: 'ASC', name: 'ASC' },
     });
   }
 
+  /**
+   * Kreira novo vozilo koristeći bazu podataka i transakciju.
+   * Istovremeno kreira osnovni Asset i specifični Vehicle entitet.
+   * @param dto Objedinjeni podaci za osnovu aseta i detalje vozila
+   * @returns Kompletan profil kreiranog vozila
+   */
   async createVehicle(dto: CreateVehicleDto) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -75,7 +91,6 @@ export class AssetsService {
       await queryRunner.manager.save(vehicle);
 
       await queryRunner.commitTransaction();
-
       return this.findOne(savedAsset.id);
     } catch (err) {
       await queryRunner.rollbackTransaction();
@@ -85,6 +100,11 @@ export class AssetsService {
     }
   }
 
+  /**
+   * Kreira novu nekretninu koristeći bazu podataka i transakciju.
+   * @param dto Objedinjeni podaci za osnovu aseta i detalje nekretnine
+   * @returns Kompletan profil kreirane nekretnine
+   */
   async createProperty(dto: CreatePropertyDto) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -110,7 +130,6 @@ export class AssetsService {
       await queryRunner.manager.save(property);
 
       await queryRunner.commitTransaction();
-
       return this.findOne(savedAsset.id);
     } catch (err) {
       await queryRunner.rollbackTransaction();
@@ -120,6 +139,11 @@ export class AssetsService {
     }
   }
 
+  /**
+   * Dobavlja osnovne podatke o asetu bez izračunatih vrednosti.
+   * @param id UUID aseta
+   * @returns Asset entitet sa osnovnim relacijama
+   */
   async findOne(id: string) {
     const asset = await this.assetRepo.findOne({
       where: { id },
@@ -129,6 +153,12 @@ export class AssetsService {
     return asset;
   }
 
+  /**
+   * Povezuje karakteristiku iz šifarnika sa konkretnim asetom uz validaciju tipa.
+   * Onemogućava dodavanje npr. automobilske opreme na nekretninu.
+   * @param dto Podaci o asetu, karakteristici i uticaju na cenu
+   * @returns Status poruka o uspešnom povezivanju
+   */
   async linkFeatureToAsset(dto: LinkFeatureDto) {
     const asset = await this.assetRepo.findOne({ where: { id: dto.asset_id } });
     const feature = await this.featureRepo.findOne({
@@ -154,7 +184,6 @@ export class AssetsService {
     }
 
     const assetFeature = this.assetFeatureRepo.create(dto);
-
     await this.assetFeatureRepo.save(assetFeature);
 
     return {
@@ -163,6 +192,12 @@ export class AssetsService {
     };
   }
 
+  /**
+   * Interna pomoćna metoda za kalkulaciju ukupne nabavne vrednosti.
+   * Sabira osnovnu cenu sa svim dodatim karakteristikama.
+   * @param asset Asset entitet sa učitanim assetFeatures relacijama
+   * @returns Ukupna numerička vrednost
+   */
   private calculateTotalPrice(asset: Asset): number {
     const basePrice = Number(asset.base_price);
     const featuresImpact =
@@ -173,6 +208,11 @@ export class AssetsService {
     return basePrice + featuresImpact;
   }
 
+  /**
+   * Dobavlja sve detalje o asetu, uključujući svu opremu i totalnu cenu.
+   * @param id UUID aseta
+   * @returns Prošireni objekat aseta sa poljem total_price
+   */
   async getAssetDetails(id: string) {
     const asset = await this.assetRepo.findOne({
       where: { id },
@@ -181,6 +221,7 @@ export class AssetsService {
         'property',
         'assetFeatures',
         'assetFeatures.feature',
+        'marketCategory',
       ],
     });
 
@@ -192,6 +233,12 @@ export class AssetsService {
     };
   }
 
+  /**
+   * Kompletan sistem za filtriranje, pretragu i paginaciju imovine.
+   * Dinamički gradi SQL upit na osnovu prisutnih filtera za vozila ili nekretnine.
+   * @param filters DTO sa parametrima pretrage (cene, brendovi, površine, sortiranje)
+   * @returns Objekat sa nizom podataka i metapodacima o paginaciji
+   */
   async findAll(filters: GetAssetsFilterDto) {
     const query = this.assetRepo
       .createQueryBuilder('asset')
@@ -282,7 +329,6 @@ export class AssetsService {
 
     if (filters.sortBy) {
       const sortBy = filters.sortBy;
-
       if (['make', 'model', 'production_year'].includes(sortBy)) {
         query.orderBy(`vehicle.${sortBy}`, order);
       } else if (['sq_meters', 'location_zone'].includes(sortBy)) {

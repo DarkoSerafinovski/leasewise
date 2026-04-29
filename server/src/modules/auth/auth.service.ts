@@ -10,6 +10,15 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
+  /**
+   * Autentifikacija korisnika na osnovu email-a i lozinke.
+   * Proverava postojanje korisnika i validnost lozinke koristeći bcrypt poređenje.
+   * U slučaju uspeha, generiše JWT token sa osnovnim podacima (payload).
+   * * @param email Email adresa korisnika
+   * @param pass Lozinka u plain-text formatu
+   * @throws UnauthorizedException ako su podaci netačni ili korisnik ne postoji
+   * @returns Objekat koji sadrži access_token i osnovne podatke o ulogovanom korisniku
+   */
   async login(email: string, pass: string) {
     const user = await this.usersService.findOneByEmail(email);
 
@@ -29,6 +38,7 @@ export class AuthService {
         },
       };
     }
-    throw new UnauthorizedException('Pogresan email ili lozinka');
+
+    throw new UnauthorizedException('Pogrešan email ili lozinka');
   }
 }

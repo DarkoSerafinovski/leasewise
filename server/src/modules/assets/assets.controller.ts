@@ -4,62 +4,73 @@ import {
   Post,
   Body,
   Param,
-  UseGuards,
+  Query,
   ParseUUIDPipe,
+  HttpStatus,
+  HttpCode,
+  UseGuards,
 } from '@nestjs/common';
 import { AssetsService } from './assets.service';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { RolesGuard } from '../auth/guards/roles.guard';
 import { CreateFeatureDto } from './dto/create-feature.dto';
-import { LinkFeatureDto } from './dto/link-feature.dto';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { CreatePropertyDto } from './dto/create-property.dto';
+import { LinkFeatureDto } from './dto/link-feature.dto';
 import { GetAssetsFilterDto } from './entities/get-assets-filter.dto';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 
 @Controller('assets')
 export class AssetsController {
   constructor(private readonly assetsService: AssetsService) {}
 
   @Post('features')
-  @Roles('admin')
   @UseGuards(RolesGuard)
+  @Roles('admin')
+  @HttpCode(HttpStatus.CREATED)
   async createFeature(@Body() dto: CreateFeatureDto) {
-    return this.assetsService.createFeature(dto);
+    return await this.assetsService.createFeature(dto);
   }
 
   @Get('features')
   async getAllFeatures() {
-    return this.assetsService.findAllFeatures();
+    return await this.assetsService.findAllFeatures();
   }
 
   @Post('vehicles')
-  @Roles('admin')
   @UseGuards(RolesGuard)
+  @Roles('admin')
+  @HttpCode(HttpStatus.CREATED)
   async createVehicle(@Body() dto: CreateVehicleDto) {
-    return this.assetsService.createVehicle(dto);
+    return await this.assetsService.createVehicle(dto);
   }
 
   @Post('properties')
-  @Roles('admin')
   @UseGuards(RolesGuard)
+  @Roles('admin')
+  @HttpCode(HttpStatus.CREATED)
   async createProperty(@Body() dto: CreatePropertyDto) {
-    return this.assetsService.createProperty(dto);
+    return await this.assetsService.createProperty(dto);
   }
 
   @Post('link-feature')
-  @Roles('admin')
   @UseGuards(RolesGuard)
+  @Roles('admin')
   async linkFeature(@Body() dto: LinkFeatureDto) {
-    return this.assetsService.linkFeatureToAsset(dto);
+    return await this.assetsService.linkFeatureToAsset(dto);
+  }
+
+  @Get()
+  async findAll(@Query() filters: GetAssetsFilterDto) {
+    return await this.assetsService.findAll(filters);
+  }
+
+  @Get(':id/details')
+  async getDetails(@Param('id', ParseUUIDPipe) id: string) {
+    return await this.assetsService.getAssetDetails(id);
   }
 
   @Get(':id')
-  async getDetails(@Param('id', ParseUUIDPipe) id: string) {
-    return this.assetsService.getAssetDetails(id);
-  }
-
-  @Get('assets')
-  async getAllAssets(@Body() dto: GetAssetsFilterDto) {
-    return this.assetsService.findAll(dto);
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+    return await this.assetsService.findOne(id);
   }
 }

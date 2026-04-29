@@ -11,6 +11,8 @@ import { Vehicle } from './vehicles.entity';
 import { Property } from './property.entity';
 import { AssetFeature } from './asset-feature-entity';
 import { MarketDepreciation } from 'src/modules/market/entities/market-depreciation.entity';
+import { AssetMaintenance } from 'src/modules/maintenances/entities/asset-maintenance.entity';
+import { Insurance } from 'src/modules/maintenances/entities/insurance.entity';
 
 export enum AssetType {
   VEHICLE = 'vehicle',
@@ -49,4 +51,10 @@ export class Asset {
   @ManyToOne(() => MarketDepreciation, (md) => md.assets)
   @JoinColumn({ name: 'market_category_id' })
   marketCategory!: MarketDepreciation;
+
+  @OneToMany(() => AssetMaintenance, (am) => am.asset)
+  maintenances!: AssetMaintenance[];
+
+  @OneToMany(() => Insurance, (i) => i.asset)
+  insurances!: Insurance[];
 }

@@ -21,6 +21,13 @@ export class DocumentsService {
     private readonly userDocRepo: Repository<UserDocument>,
   ) {}
 
+  /**
+   * Kreira novi tip dokumenta u sistemu (npr. 'Lična karta', 'Ugovor o radu').
+   * Vrši proveru jedinstvenosti koda i imena dokumenta.
+   * @param dto Podaci o nazivu, kodu i zahtevima dokumenta
+   * @returns Objekat sa statusom uspeha i generisanom porukom
+   * @throws ConflictException ako kod ili ime već postoje
+   */
   async createType(dto: CreateDocumentTypeDto) {
     const codeFormatted = dto.code.toUpperCase();
 
@@ -49,6 +56,10 @@ export class DocumentsService {
     };
   }
 
+  /**
+   * Dobavlja listu svih definisanih tipova dokumenata.
+   * @returns Niz DocumentType entiteta sortiranih po abecedi
+   */
   async findAllTypes(): Promise<DocumentType[]> {
     return await this.docTypeRepo.find({
       order: {
@@ -57,6 +68,13 @@ export class DocumentsService {
     });
   }
 
+  /**
+   * Ažurira postojeći tip dokumenta.
+   * @param id Numerički ID tipa dokumenta
+   * @param dto Delimični podaci za izmenu
+   * @returns Status poruka o uspehu
+   * @throws NotFoundException ako tip ne postoji
+   */
   async updateType(id: number, dto: Partial<CreateDocumentTypeDto>) {
     const type = await this.docTypeRepo.findOne({ where: { id } });
     if (!type) throw new NotFoundException('Tip dokumenta nije pronađen.');
@@ -78,6 +96,13 @@ export class DocumentsService {
     return { success: true, message: 'Tip dokumenta je uspešno ažuriran.' };
   }
 
+  /**
+   * Briše tip dokumenta iz šifarnika.
+   * Onemogućava brisanje ako postoje korisnički dokumenti vezani za ovaj tip.
+   * @param id ID tipa dokumenta
+   * @returns Status poruka o uspehu
+   * @throws ConflictException u slučaju narušavanja stranog ključa (FK)
+   */
   async deleteType(id: number) {
     const type = await this.docTypeRepo.findOne({ where: { id } });
     if (!type) throw new NotFoundException('Tip dokumenta ne postoji.');
@@ -93,6 +118,14 @@ export class DocumentsService {
     }
   }
 
+  /**
+   * Omogućava korisniku da pošalje dokument na verifikaciju.
+   * Sprečava slanje duplih dokumenata istog tipa dok je prethodni još u obradi.
+   * @param dto Sadrži ID tipa dokumenta i URL fajla (npr. sa S3 ili Cloudinary)
+   * @param userId UUID korisnika koji šalje dokument
+   * @returns Poruka o uspešnom slanju
+   * @throws ConflictException ako već postoji dokument na čekanju (PENDING)
+   */
   async uploadUserDocument(dto: CreateUserDocumentDto, userId: string) {
     const docType = await this.docTypeRepo.findOne({
       where: { id: dto.doc_type_id },
@@ -128,6 +161,13 @@ export class DocumentsService {
     };
   }
 
+  /**
+   * Administrativna metoda za odobravanje ili odbijanje dokumenta.
+   * U slučaju odbijanja, obavezno je navesti razlog (rejection_reason).
+   * @param id UUID korisničkog dokumenta
+   * @param dto Novi status i opcioni razlog odbijanja
+   * @returns Detalji o ishodu verifikacije
+   */
   async verifyDocument(id: string, dto: VerifyDocumentDto) {
     const document = await this.userDocRepo.findOne({
       where: { id },
@@ -155,6 +195,11 @@ export class DocumentsService {
     };
   }
 
+  /**
+   * Dobavlja istoriju svih dokumenata koje je određeni korisnik poslao.
+   * @param userId UUID korisnika
+   * @returns Niz dokumenata sortiranih od najnovijeg
+   */
   async findUserDocuments(userId: string) {
     return await this.userDocRepo.find({
       where: { user_id: userId },
@@ -163,6 +208,11 @@ export class DocumentsService {
     });
   }
 
+  /**
+   * Dobavlja sve dokumente iz sistema koji čekaju na admin verifikaciju.
+   * Koristi se za admin dashboard (red čekanja).
+   * @returns Niz dokumenata sa uključenim podacima o korisniku i tipu
+   */
   async findAllPending() {
     return await this.userDocRepo.find({
       where: { status: DocumentStatus.PENDING },
@@ -171,6 +221,11 @@ export class DocumentsService {
     });
   }
 
+  /**
+   * Dobavlja detaljne informacije o jednom specifičnom dokumentu.
+   * @param id UUID dokumenta
+   * @returns UserDocument sa svim relacijama ili baca NotFoundException
+   */
   async findOneDocument(id: string) {
     const doc = await this.userDocRepo.findOne({
       where: { id },

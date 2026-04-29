@@ -20,6 +20,14 @@ export class UsersService {
     private dataSource: DataSource,
   ) {}
 
+  /**
+   * Kreira profil za fizičko lice (Individual) koristeći bazu podataka i transakciju.
+   * Proces uključuje generisanje salt-a, hash-ovanje lozinke, kreiranje osnovnog User naloga,
+   * a potom i kreiranje povezanog individualnog profila.
+   * @param userData Osnovni podaci o korisniku (email, password, role)
+   * @param profileData Lični podaci (ime, prezime, prihodi, zaposlenje)
+   * @returns Podaci o korisniku bez lozinke (password_hash je uklonjen iz odgovora)
+   */
   async createIndividualProfile(
     userData: DeepPartial<User>,
     profileData: DeepPartial<IndividualProfile>,
@@ -47,7 +55,6 @@ export class UsersService {
       await queryRunner.manager.save(profile);
 
       await queryRunner.commitTransaction();
-
       return userWithoutPassword;
     } catch (err) {
       await queryRunner.rollbackTransaction();
@@ -57,6 +64,13 @@ export class UsersService {
     }
   }
 
+  /**
+   * Kreira profil za pravno lice (Business) kroz atomičnu transakciju.
+   * Slično kao kod fizičkih lica, ali kreira BusinessProfile sa podacima o kompaniji.
+   * @param userData Osnovni podaci o nalogu
+   * @param profileData Poslovni podaci (naziv firme, PIB, prihodi, EBITDA)
+   * @returns Podaci o kreiranom korisniku bez lozinke
+   */
   async createBusinessProfile(
     userData: DeepPartial<User>,
     profileData: DeepPartial<BusinessProfile>,
@@ -84,7 +98,6 @@ export class UsersService {
       await queryRunner.manager.save(profile);
 
       await queryRunner.commitTransaction();
-
       return userWithoutPassword;
     } catch (err) {
       await queryRunner.rollbackTransaction();
@@ -94,6 +107,13 @@ export class UsersService {
     }
   }
 
+  /**
+   * Pronalazi korisnika isključivo na osnovu email-a.
+   * Koristi se primarno u AuthService-u za proces logovanja.
+   * Eksplicitno selektuje password_hash koji je inače sakriven u entitetu.
+   * @param email Jedinstvena email adresa korisnika
+   * @returns User entitet ili null ako korisnik ne postoji
+   */
   async findOneByEmail(email: string): Promise<User | null> {
     return this.userRepo
       .createQueryBuilder('user')
@@ -102,6 +122,13 @@ export class UsersService {
       .getOne();
   }
 
+  /**
+   * Dobavlja kompletan profil korisnika na osnovu njegovog ID-a.
+   * Dinamički određuje koju relaciju (individualnu ili poslovnu) treba učitati na osnovu uloge.
+   * @param id UUID korisnika
+   * @returns Korisnik sa učitanim specifičnim profilom
+   * @throws NotFoundException ako ID ne postoji u bazi
+   */
   async getUserById(id: string) {
     const user = await this.userRepo.findOne({ where: { id } });
 
@@ -120,6 +147,13 @@ export class UsersService {
     return profile;
   }
 
+  /**
+   * Napredni sistem za filtriranje korisnika i njihovih profila.
+   * Omogućava pretragu po email-u, roli, ali i po specifičnim poljima iz profila
+   * (npr. opseg prihoda za fizička lica ili EBITDA za pravna lica).
+   * @param filters DTO sa kriterijumima za pretragu, sortiranje i paginaciju
+   * @returns Paginisana lista korisnika sa uključenim podacima iz profila
+   */
   async findAll(filters: GetUsersFilterDto) {
     const query = this.userRepo
       .createQueryBuilder('user')
@@ -154,7 +188,7 @@ export class UsersService {
         status: filters.employment_status,
       });
 
-    if (filters.is_permanently_employed)
+    if (filters.is_permanently_employed !== undefined)
       query.andWhere('ind.is_permanently_employed = :status', {
         status: filters.is_permanently_employed,
       });
@@ -174,7 +208,7 @@ export class UsersService {
         cn: `%${filters.company_name}%`,
       });
 
-    if (filters.is_tax_payer)
+    if (filters.is_tax_payer !== undefined)
       query.andWhere('biz.is_tax_payer = :payer', {
         payer: filters.is_tax_payer,
       });
@@ -221,7 +255,8 @@ export class UsersService {
 
       query.orderBy(sortField, order);
     }
-    const [data, total] = await query.printSql().getManyAndCount();
+
+    const [data, total] = await query.getManyAndCount();
 
     return {
       data,
@@ -233,6 +268,13 @@ export class UsersService {
     };
   }
 
+  /**
+   * Menja status aktivnosti korisnika (Toggle).
+   * Ako je korisnik bio aktivan, biće deaktiviran i obrnuto.
+   * @param id UUID korisnika
+   * @returns Objekat sa novim stanjem i porukom uspeha
+   * @throws NotFoundException ako korisnik ne postoji
+   */
   async toggleStatus(id: string) {
     const user = await this.userRepo.findOne({ where: { id } });
 
@@ -246,7 +288,7 @@ export class UsersService {
     return {
       success: true,
       message: `Korisnik je uspešno ${user.isActive ? 'aktiviran' : 'deaktiviran'}`,
-      currentStatus: user.isActive, // Ovo je korisno da frontend odmah zna novo stanje
+      currentStatus: user.isActive,
     };
   }
 }

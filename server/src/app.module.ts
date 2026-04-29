@@ -11,6 +11,7 @@ import { DocumentsModule } from './modules/documents/documents.module';
 import { ProfilesModule } from './modules/profiles/profiles.module';
 import { AssetsModule } from './modules/assets/assets.module';
 import { MarketModule } from './modules/market/market.module';
+import { MaintenancesModule } from './modules/maintenances/maintenances.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { MarketModule } from './modules/market/market.module';
     ProfilesModule,
     AssetsModule,
     MarketModule,
+    MaintenancesModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }, AppService],
