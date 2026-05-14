@@ -16,6 +16,7 @@ import { Property } from './entities/property.entity';
 import { LinkFeatureDto } from './dto/link-feature.dto';
 import { AssetFeature } from './entities/asset-feature-entity';
 import { GetAssetsFilterDto } from './entities/get-assets-filter.dto';
+import { GetFeaturesFilterDto } from './dto/get-features-filter.dto';
 
 @Injectable()
 export class AssetsService {
@@ -54,8 +55,10 @@ export class AssetsService {
    * Dobavlja sve dostupne karakteristike iz šifarnika.
    * @returns Niz Feature entiteta sortiranih po kategoriji i nazivu
    */
-  async findAllFeatures() {
+  async findAllFeatures(filter: GetFeaturesFilterDto) {
+    const { category } = filter;
     return await this.featureRepo.find({
+      where: category ? { category } : {},
       order: { category: 'ASC', name: 'ASC' },
     });
   }
@@ -91,7 +94,7 @@ export class AssetsService {
       await queryRunner.manager.save(vehicle);
 
       await queryRunner.commitTransaction();
-      return this.findOne(savedAsset.id);
+      return this.getAssetDetails(savedAsset.id);
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw err;
@@ -130,27 +133,13 @@ export class AssetsService {
       await queryRunner.manager.save(property);
 
       await queryRunner.commitTransaction();
-      return this.findOne(savedAsset.id);
+      return this.getAssetDetails(savedAsset.id);
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw err;
     } finally {
       await queryRunner.release();
     }
-  }
-
-  /**
-   * Dobavlja osnovne podatke o asetu bez izračunatih vrednosti.
-   * @param id UUID aseta
-   * @returns Asset entitet sa osnovnim relacijama
-   */
-  async findOne(id: string) {
-    const asset = await this.assetRepo.findOne({
-      where: { id },
-      relations: ['vehicle', 'property'],
-    });
-    if (!asset) throw new NotFoundException('Asset nije pronađen.');
-    return asset;
   }
 
   /**

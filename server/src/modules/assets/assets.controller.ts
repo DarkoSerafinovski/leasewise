@@ -18,6 +18,7 @@ import { LinkFeatureDto } from './dto/link-feature.dto';
 import { GetAssetsFilterDto } from './entities/get-assets-filter.dto';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { GetFeaturesFilterDto } from './dto/get-features-filter.dto';
 
 @Controller('assets')
 export class AssetsController {
@@ -32,8 +33,8 @@ export class AssetsController {
   }
 
   @Get('features')
-  async getAllFeatures() {
-    return await this.assetsService.findAllFeatures();
+  async getAllFeatures(@Query() filterDto: GetFeaturesFilterDto) {
+    return await this.assetsService.findAllFeatures(filterDto);
   }
 
   @Post('vehicles')
@@ -64,13 +65,8 @@ export class AssetsController {
     return await this.assetsService.findAll(filters);
   }
 
-  @Get(':id/details')
+  @Get(':id')
   async getDetails(@Param('id', ParseUUIDPipe) id: string) {
     return await this.assetsService.getAssetDetails(id);
-  }
-
-  @Get(':id')
-  async findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return await this.assetsService.findOne(id);
   }
 }

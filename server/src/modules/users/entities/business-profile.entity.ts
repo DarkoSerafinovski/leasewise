@@ -25,6 +25,9 @@ export class BusinessProfile {
   @Column({ type: 'decimal', precision: 18, scale: 2, default: 0 })
   ebitda!: number;
 
+  @Column({ type: 'decimal', precision: 18, scale: 2, default: 0 })
+  external_monthly_debt!: number;
+
   @Column({ type: 'boolean', default: false })
   is_tax_payer!: boolean;
 

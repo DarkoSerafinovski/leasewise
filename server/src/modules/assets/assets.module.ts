@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AssetsService } from './assets.service';
 import { AssetsController } from './assets.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -12,7 +12,7 @@ import { MarketModule } from '../market/market.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Asset, Property, Vehicle, Feature, AssetFeature]),
-    MarketModule,
+    forwardRef(() => MarketModule),
   ],
   controllers: [AssetsController],
   providers: [AssetsService],

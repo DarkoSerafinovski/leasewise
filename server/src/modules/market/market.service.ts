@@ -14,11 +14,30 @@ import { UpdateMarketDepreciationDto } from './dto/update-market-depreciation.dt
 import { AssetsService } from '../assets/assets.service';
 import { MaintenanceService } from '../maintenances/maintenances.service';
 
+export interface ValuationResult {
+  assetName: string;
+  calculationDate: string;
+  targetYear: number;
+  baseValue: number;
+  projectedValue: number;
+  diff: {
+    amount: number;
+    percentage: number;
+    isAppreciation: boolean;
+  };
+  factors: {
+    appliedMaintenanceBonus: boolean;
+    category: string;
+  };
+}
+
 @Injectable()
 export class MarketService {
   constructor(
     @InjectRepository(MarketDepreciation)
     private readonly marketRepo: Repository<MarketDepreciation>,
+
+    @Inject(forwardRef(() => AssetsService))
     private readonly assetsService: AssetsService,
     @Inject(forwardRef(() => MaintenanceService))
     private readonly maintenanceService: MaintenanceService,
@@ -102,7 +121,7 @@ export class MarketService {
   async calculateValuation(
     assetId: string,
     targetYear: number,
-  ): Promise<number> {
+  ): Promise<ValuationResult> {
     const asset = await this.assetsService.getAssetDetails(assetId);
 
     if (!asset.marketCategory) {
@@ -136,6 +155,24 @@ export class MarketService {
         : projectedValue * (1 - currentRate);
     }
 
-    return Math.round(projectedValue * 100) / 100;
+    const totalChange = projectedValue - Number(asset.total_price);
+
+    return {
+      assetName: asset.name,
+      calculationDate: new Date().toISOString(),
+      targetYear,
+      baseValue: Number(asset.total_price),
+      projectedValue: Math.round(projectedValue * 100) / 100,
+      diff: {
+        amount: Math.round(totalChange * 100) / 100,
+        percentage:
+          Math.round((totalChange / Number(asset.total_price)) * 10000) / 100,
+        isAppreciation: is_appreciation,
+      },
+      factors: {
+        appliedMaintenanceBonus: !is_appreciation && hasMaintenance,
+        category: asset.marketCategory.category_name,
+      },
+    };
   }
 }

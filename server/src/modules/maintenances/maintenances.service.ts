@@ -189,26 +189,41 @@ export class MaintenanceService {
     const initialValue = Number(asset.total_price);
 
     const monthlyCost = await this.calculateMonthlyHoldingCost(assetId);
-    const totalMaintenanceOverPeriod = monthlyCost * (years * 12);
+    const totalOperatingCosts = monthlyCost * (years * 12);
 
     const targetYear = new Date().getFullYear() + years;
-    const futureValue = await this.marketService.calculateValuation(
+    const valuation = await this.marketService.calculateValuation(
       assetId,
       targetYear,
     );
 
+    const futureValue = valuation.projectedValue;
     const depreciation = initialValue - futureValue;
-    const totalOwnershipCost = depreciation + totalMaintenanceOverPeriod;
+
+    const totalTCO = depreciation + totalOperatingCosts;
 
     return {
-      period_years: years,
-      initial_asset_value: initialValue,
-      projected_market_value: futureValue,
-      total_maintenance_costs:
-        Math.round(totalMaintenanceOverPeriod * 100) / 100,
-      real_cost_of_ownership: Math.round(totalOwnershipCost * 100) / 100,
-      monthly_average_all_included:
-        Math.round((totalOwnershipCost / (years * 12)) * 100) / 100,
+      summary: {
+        asset_name: asset.name,
+        period_years: years,
+        total_tco: Math.round(totalTCO * 100) / 100,
+        monthly_avg: Math.round((totalTCO / (years * 12)) * 100) / 100,
+      },
+      value_projection: {
+        initial_value: initialValue,
+        future_value: futureValue,
+        depreciation_loss: Math.round(depreciation * 100) / 100,
+        loss_percentage: valuation.diff.percentage,
+      },
+      operating_costs: {
+        total_maintenance_and_insurance:
+          Math.round(totalOperatingCosts * 100) / 100,
+        monthly_holding_cost: Math.round(monthlyCost * 100) / 100,
+      },
+      factors: {
+        maintenance_bonus_applied: valuation.factors.appliedMaintenanceBonus,
+        market_category: valuation.factors.category,
+      },
     };
   }
 }

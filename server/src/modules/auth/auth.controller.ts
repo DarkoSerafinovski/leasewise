@@ -2,6 +2,8 @@ import { Controller, Post, Body, Request, Get } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { Public } from './decorators/public.decorator';
+import { CurrentUser } from './decorators/current-user.decorator';
+import type { ActiveUserData } from '../users/entities/user.entity';
 
 @Controller('auth')
 export class AuthController {
@@ -14,7 +16,7 @@ export class AuthController {
   }
 
   @Get('profile')
-  getProfile(@Request() req) {
-    return req.user;
+  getProfile(@CurrentUser() user: ActiveUserData) {
+    return user;
   }
 }

@@ -36,7 +36,7 @@ export class UserDocument {
   })
   status!: DocumentStatus;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   rejection_reason!: string | null;
 
   @CreateDateColumn()

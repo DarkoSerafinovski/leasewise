@@ -6,6 +6,9 @@ import { IndividualProfile } from './entities/individual-profile.entity';
 import { BusinessProfile } from './entities/business-profile.entity';
 import * as bcrypt from 'bcrypt';
 import { GetUsersFilterDto } from './dto/get-users-filter.dto';
+import { CreateUserDto } from './dto/create-user.dto';
+import { CreateBusinessProfileDto } from './dto/create-business.dto';
+import { CreateIndividualProfileDto } from './dto/create-individual.dto';
 
 @Injectable()
 export class UsersService {
@@ -20,6 +23,33 @@ export class UsersService {
     private dataSource: DataSource,
   ) {}
 
+  async registerAdmin(userData: CreateUserDto) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const salt = await bcrypt.genSalt();
+      const hashedPassword = await bcrypt.hash(userData.password_hash, salt);
+
+      const user = this.userRepo.create({
+        ...userData,
+        password_hash: hashedPassword,
+      });
+      const savedUser = await queryRunner.manager.save<User>(user);
+
+      const { password_hash, ...userWithoutPassword } = savedUser;
+
+      await queryRunner.commitTransaction();
+      return userWithoutPassword;
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
   /**
    * Kreira profil za fizičko lice (Individual) koristeći bazu podataka i transakciju.
    * Proces uključuje generisanje salt-a, hash-ovanje lozinke, kreiranje osnovnog User naloga,
@@ -29,8 +59,8 @@ export class UsersService {
    * @returns Podaci o korisniku bez lozinke (password_hash je uklonjen iz odgovora)
    */
   async createIndividualProfile(
-    userData: DeepPartial<User>,
-    profileData: DeepPartial<IndividualProfile>,
+    userData: CreateUserDto,
+    profileData: CreateIndividualProfileDto,
   ) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -38,7 +68,7 @@ export class UsersService {
 
     try {
       const salt = await bcrypt.genSalt();
-      const hashedPassword = await bcrypt.hash(userData.password_hash!, salt);
+      const hashedPassword = await bcrypt.hash(userData.password_hash, salt);
 
       const user = this.userRepo.create({
         ...userData,
@@ -72,8 +102,8 @@ export class UsersService {
    * @returns Podaci o kreiranom korisniku bez lozinke
    */
   async createBusinessProfile(
-    userData: DeepPartial<User>,
-    profileData: DeepPartial<BusinessProfile>,
+    userData: CreateUserDto,
+    profileData: CreateBusinessProfileDto,
   ) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -81,7 +111,7 @@ export class UsersService {
 
     try {
       const salt = await bcrypt.genSalt();
-      const hashedPassword = await bcrypt.hash(userData.password_hash!, salt);
+      const hashedPassword = await bcrypt.hash(userData.password_hash, salt);
 
       const user = this.userRepo.create({
         ...userData,

@@ -12,6 +12,8 @@ import { ProfilesModule } from './modules/profiles/profiles.module';
 import { AssetsModule } from './modules/assets/assets.module';
 import { MarketModule } from './modules/market/market.module';
 import { MaintenancesModule } from './modules/maintenances/maintenances.module';
+import { FinancialProductsModule } from './modules/financial-products/financial-products.module';
+import { CreditScoreModule } from './modules/credit-score/credit-score.module';
 
 @Module({
   imports: [
@@ -37,6 +39,8 @@ import { MaintenancesModule } from './modules/maintenances/maintenances.module';
     AssetsModule,
     MarketModule,
     MaintenancesModule,
+    FinancialProductsModule,
+    CreditScoreModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }, AppService],

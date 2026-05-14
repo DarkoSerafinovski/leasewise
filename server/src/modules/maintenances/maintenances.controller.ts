@@ -63,9 +63,4 @@ export class MaintenanceController {
   ) {
     return await this.maintenanceService.getProjectedTotalCost(assetId, years);
   }
-
-  @Get('monthly-cost/:assetId')
-  async getMonthlyCost(@Param('assetId', ParseUUIDPipe) assetId: string) {
-    return await this.maintenanceService.calculateMonthlyHoldingCost(assetId);
-  }
 }

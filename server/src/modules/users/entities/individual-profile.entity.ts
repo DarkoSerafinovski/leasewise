@@ -30,4 +30,7 @@ export class IndividualProfile {
 
   @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
   monthly_net_income!: number;
+
+  @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
+  external_monthly_debt!: number;
 }

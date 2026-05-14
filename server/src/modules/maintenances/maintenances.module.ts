@@ -1,6 +1,6 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { MaintenanceService } from './maintenances.service';
-import { MaintenancesController } from './maintenances.controller';
+import { MaintenanceController } from './maintenances.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Insurance } from './entities/insurance.entity';
 import { AssetMaintenance } from './entities/asset-maintenance.entity';
@@ -11,10 +11,10 @@ import { MarketModule } from '../market/market.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Insurance, MaintenanceType, AssetMaintenance]),
-    AssetsModule,
-    MarketModule,
+    forwardRef(() => AssetsModule),
+    forwardRef(() => MarketModule),
   ],
-  controllers: [MaintenancesController],
+  controllers: [MaintenanceController],
   providers: [MaintenanceService],
   exports: [TypeOrmModule, MaintenanceService],
 })

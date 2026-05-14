@@ -17,7 +17,7 @@ export class CreateUserDto {
   @IsString()
   @IsNotEmpty({ message: 'Lozinka je obavezna' })
   @MinLength(8, { message: 'Lozinka mora imati najmanje 8 karaktera' })
-  password!: string;
+  password_hash!: string;
 
   @IsEnum(UserRole, {
     message: 'Uloga mora biti: admin, individual ili business',
