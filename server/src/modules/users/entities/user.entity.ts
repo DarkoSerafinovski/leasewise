@@ -5,6 +5,7 @@ import { BusinessProfile } from './business-profile.entity';
 import { UserDocument } from 'src/modules/documents/entities/user-document.entity';
 import { InvestmentProfile } from 'src/modules/profiles/entities/investment-profile.entity';
 import { CreditSnapshot } from 'src/modules/credit-score/entities/credit-snapshot.entity';
+import { InvestmentPortfolio } from 'src/modules/portfolios/entities/investment-portfolio.entity';
 
 export enum UserRole {
   ADMIN = 'admin',
@@ -55,4 +56,7 @@ export class User extends BaseEntity {
 
   @OneToMany(() => CreditSnapshot, (cs) => cs.user)
   creditScores!: CreditSnapshot[];
+
+  @OneToMany(() => InvestmentPortfolio, (ip) => ip.user)
+  portfolios!: InvestmentPortfolio[];
 }
